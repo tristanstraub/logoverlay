@@ -1,55 +1,56 @@
 (require 'json)
 
-(defun read-file-to-string (file)
+(defun logoverlay--read-file-to-string (file)
   (with-temp-buffer
     (insert-file-contents file)
     (buffer-string)))
 
-(defvar logged-overlays ())
-(make-variable-buffer-local 'logged-overlays)
+(defvar logoverlay--logged-overlays ())
+(make-variable-buffer-local 'logoverlay--logged-overlays)
 
-(defvar log-contents "")
-(defvar console-log-regexp "__LOG__(\\([^)]+\\)).*")
-(setq console-log-regexp "__LOG__(\\([^)]+\\)).*")
+(defvar logoverlay--log-contents "")
+(defvar logoverlay--console-log-regexp "__LOG__(\\([^)]+\\)).*")
+(setq logoverlay--console-log-regexp "__LOG__(\\([^)]+\\)).*")
 
-(defun read-log-file (file)
-   "Read the contents of a file into a temp buffer and then do
- something there."
-   (when (file-readable-p file)
-     (with-temp-buffer
-       (insert-file-contents file)
-       (beginning-of-buffer)
-       (while (re-search-forward (regexp-quote "log:") nil t)
-         ))))
+(defvar logoverlay--logfile "/tmp/log.json")
 
-(defun update-log-contents ()
-  (setq log-contents (json-read-file "log.json")))
+(defun logoverlay--update-log-contents ()
+  (setq logoverlay--log-contents (json-read-file logoverlay--logfile)))
 
-(defun get-log-entries-by-file-and-id (file id)
+(defun logoverlay--clear-log ()
+  (if (file-exists-p logoverlay--logfile)
+      (delete-file logoverlay--logfile)))
+
+(defun logoverlay--get-log-entries-by-file-and-id (file id)
   (remove-if-not (lambda (x)
                    (and
                     (equal (cdr (assoc 'file x)) file)
-                    (equal (cdr (assoc 'id x)) id)))
-                 log-contents))
+                    (equal (format "%s" (cdr (assoc 'id x)))
+                           (format "%s" id))))
+                 logoverlay--log-contents))
 
-(defun make-log-overlay (bounds)
-  (let ((entries (get-log-entries-by-file-and-id (buffer-file-name)
-                                         (cdr (assoc 'id bounds)))))
+(defvar logoverlay-buffer-file-name (find-lisp-object-file-name 'update-log-overlays 'defun))
+
+(defun logoverlay--make-log-overlay (bounds)
+  (let ((entries (logoverlay--get-log-entries-by-file-and-id (buffer-file-name)
+                                                             (cdr (assoc 'id bounds)))))
+    (message "entries: %s" entries)
     (mapcar (lambda (log)
               (let ((value (json-encode (cdr (assoc 'value log))))
                     (overlay (make-overlay (cdr (assoc 'start bounds))
-                                           (cdr (assoc 'end bounds)))))
-                (push overlay logged-overlays)
+                                           (cdr (assoc 'end bounds))
+                                           )))
+                (push overlay logoverlay--logged-overlays)
                 (overlay-put overlay 'face '(underline . green))
                 (overlay-put overlay 'help-echo value)
                 (overlay-put overlay 'after-string (concat " -> " value))))
             entries)))
 
-(defun find-logs ()
+(defun logoverlay--find-logs ()
   (let ((logs nil))
     (save-excursion
       (beginning-of-buffer)
-      (while (re-search-forward console-log-regexp nil t)
+      (while (re-search-forward logoverlay--console-log-regexp nil t)
         (push (list (cons 'start (line-beginning-position))
                     (cons 'end (line-end-position))
                     (cons 'id (match-string-no-properties 1)))
@@ -58,16 +59,22 @@
 ;; __LOG__(1)
 
 
-(defun overlay-logs (logs)
-  (mapcar 'make-log-overlay logs))
+(defun logoverlay--overlay-logs (logs)
+  (mapcar 'logoverlay--make-log-overlay logs))
 
-(defun remove-log-overlays ()
-  (mapcar 'delete-overlay logged-overlays)
-  (setq logged-overlays ()))
+(defun logoverlay--remove-log-overlays ()
+  (mapcar 'delete-overlay logoverlay--logged-overlays)
+  (setq logoverlay--logged-overlays ()))
 
-(defun update-log-overlays ()
-  (update-log-contents)
-  (remove-log-overlays)
-  (overlay-logs (find-logs)))
+
+(defun logoverlay-clear-log ()
+  (interactive)
+  (logoverlay--clear-log))
+
+(defun logoverlay-update-log ()
+  (interactive)
+  (logoverlay--update-log-contents)
+  (logoverlay--remove-log-overlays)
+  (logoverlay--overlay-logs (logoverlay--find-logs)))
 
 (provide 'logoverlay)
