@@ -1,11 +1,11 @@
 (function() {
-  fs = require('fs');
+  var fs = require('fs');
   module.exports = function(logFilename, loggedFilename) {
     return function(id, value) {
       var collection;
 
       try {
-        collection = JSON.parse(fs.readFileSync(logFileName));
+        collection = JSON.parse(fs.readFileSync(logFilename));
       } catch (e) {
         collection = [];
       }
