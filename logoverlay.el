@@ -9,8 +9,8 @@
 (make-variable-buffer-local 'logoverlay--logged-overlays)
 
 (defvar logoverlay--log-contents "")
-(defvar logoverlay--console-log-regexp "__LOG__(\\([^)]+\\)).*")
-(setq logoverlay--console-log-regexp "__LOG__(\\([^)]+\\)).*")
+(defvar logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*"")
+(setq logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*")
 
 (defvar logoverlay--logfile "/tmp/log.json")
 

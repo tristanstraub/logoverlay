@@ -1,6 +1,6 @@
 (function() {
   fs = require('fs');
-  exports.logger = function(logFilename, loggedFilename) {
+  module.exports = function(logFilename, loggedFilename) {
     return function(id, value) {
       var logFileName;
       return function(value) {
