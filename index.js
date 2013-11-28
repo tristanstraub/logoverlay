@@ -1,4 +1,5 @@
 (function() {
+  fs = require('fs');
   exports.__LOG__ = function(id) {
     var logFileName;
     logFileName = '/tmp/log.json';
