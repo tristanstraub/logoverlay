@@ -8,14 +8,19 @@
 (defvar logoverlay--logged-overlays ())
 (make-variable-buffer-local 'logoverlay--logged-overlays)
 
+(defvar logoverlay--showing-overlays nil)
+(make-variable-buffer-local 'logoverlay--showing-overlays)
+
 (defvar logoverlay--log-contents "")
-(defvar logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*"")
+(defvar logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*")
 (setq logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*")
 
 (defvar logoverlay--logfile "/tmp/log.json")
 
 (defun logoverlay--update-log-contents ()
-  (setq logoverlay--log-contents (json-read-file logoverlay--logfile)))
+  (if (file-exists-p logoverlay--logfile)
+      (setq logoverlay--log-contents (json-read-file logoverlay--logfile))
+    (setq logoverlay--log-contents nil)))
 
 (defun logoverlay--clear-log ()
   (if (file-exists-p logoverlay--logfile)
@@ -60,21 +65,35 @@
 
 
 (defun logoverlay--overlay-logs (logs)
-  (mapcar 'logoverlay--make-log-overlay logs))
+  (mapcar 'logoverlay--make-log-overlay logs)
+  (setq logoverlay--showing-overlays t))
 
 (defun logoverlay--remove-log-overlays ()
   (mapcar 'delete-overlay logoverlay--logged-overlays)
-  (setq logoverlay--logged-overlays ()))
+  (setq logoverlay--logged-overlays ())
+  (setq logoverlay--showing-overlays nil))
 
 
 (defun logoverlay-clear-log ()
   (interactive)
   (logoverlay--clear-log))
 
-(defun logoverlay-update-log ()
+(defun logoverlay-remove-overlays ()
+  (interactive)
+  (logoverlay--remove-log-overlays))
+
+(defun logoverlay-update-overlays ()
   (interactive)
   (logoverlay--update-log-contents)
   (logoverlay--remove-log-overlays)
   (logoverlay--overlay-logs (logoverlay--find-logs)))
+
+(defun logoverlay-toggle-overlays ()
+  (interactive)
+  (if logoverlay--showing-overlays
+      (logoverlay-remove-overlays)
+    (logoverlay-update-overlays)
+    ))
+
 
 (provide 'logoverlay)

@@ -1,23 +1,29 @@
 (function() {
-  var fs = require('fs');
-  module.exports = function(logFilename, loggedFilename) {
-    return function(id, value) {
-      var collection;
+    module.exports = function(logFilename, loggedFilename) {
+        var objectToLog;
 
-      try {
-        collection = JSON.parse(fs.readFileSync(logFilename));
-      } catch (e) {
-        collection = [];
-      }
+        return function(id, value) {
+            var collection;
+            var objectToLog = {
+                file: loggedFilename,
+                id: id,
+                value: value
+            };
 
-      collection.push({
-        file: loggedFilename,
-        id: id,
-        value: value
-      });
+            if (typeof logFilename === 'function') {
+                logFilename(objectToLog);
+            } else {
+                var fs = require('fs');
+                try {
+                    collection = JSON.parse(fs.readFileSync(logFilename));
+                } catch (e) {
+                    collection = [];
+                }
 
-      fs.writeFileSync(logFilename, JSON.stringify(collection));
+                collection.push(objectToLog);
+                fs.writeFileSync(logFilename, JSON.stringify(collection));
+            }
+        };
     };
-  };
 
 }).call(this);
