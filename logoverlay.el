@@ -39,7 +39,6 @@
 (defun logoverlay--make-log-overlay (bounds)
   (let ((entries (logoverlay--get-log-entries-by-file-and-id (buffer-file-name)
                                                              (cdr (assoc 'id bounds)))))
-    (message "entries: %s" entries)
     (mapcar (lambda (log)
               (let ((value (json-encode (cdr (assoc 'value log))))
                     (overlay (make-overlay (cdr (assoc 'start bounds))
@@ -48,7 +47,7 @@
                 (push overlay logoverlay--logged-overlays)
                 (overlay-put overlay 'face '(underline . green))
                 (overlay-put overlay 'help-echo value)
-                (overlay-put overlay 'after-string (concat " -> " value))))
+                (overlay-put overlay 'after-string (concat "\n -> " value))))
             entries)))
 
 (defun logoverlay--find-logs ()
@@ -61,12 +60,17 @@
                     (cons 'id (match-string-no-properties 1)))
               logs)))
     logs))
-;; __LOG__(1)
-
 
 (defun logoverlay--overlay-logs (logs)
   (mapcar 'logoverlay--make-log-overlay logs)
-  (setq logoverlay--showing-overlays t))
+  (setq logoverlay--showing-overlays t)
+
+  (logoverlay--start-timer))
+
+(defun logoverlay--start-timer ()
+  (if (not logoverlay--monitor-timer)
+      (setq logoverlay--monitor-timer 
+            (logoverlay--install-monitor "/tmp/log.json" 5 'logoverlay--log-changed))))
 
 (defun logoverlay--remove-log-overlays ()
   (mapcar 'delete-overlay logoverlay--logged-overlays)
@@ -95,5 +99,32 @@
     (logoverlay-update-overlays)
     ))
 
+(defun logoverlay--refresh-overlays ()
+  (if logoverlay--showing-overlays
+      (progn
+        (logoverlay-toggle-overlays)
+        (logoverlay-toggle-overlays))))
+
+(defvar logoverlay--monitor-attributes nil
+  "Cached file attributes to be monitored.")
+
+(defun logoverlay--install-monitor (file secs fn)
+  (run-with-timer
+   0 secs
+   (lambda (f p fn)
+     (let ((att (file-attributes f)))
+       (unless (or (null logoverlay--monitor-attributes) (equalp logoverlay--monitor-attributes att))
+         (funcall fn))
+       (setq logoverlay--monitor-attributes att)))
+   file secs fn))
+
+(defun logoverlay--log-changed ()
+  (logoverlay--refresh-overlays)
+  )
+
+(defvar logoverlay--monitor-timer nil
+  "Check if /tmp is changed every 5s.")
 
 (provide 'logoverlay)
+
+
