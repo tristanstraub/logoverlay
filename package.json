@@ -1,6 +1,6 @@
 {
   "name": "logoverlay",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "logoverlay ==========",
   "main": "index.js",
   "scripts": {
@@ -10,8 +10,8 @@
     "type": "git",
     "url": "https://github.com/tristanstraub/logoverlay"
   },
-  "author": "",
-  "license": "BSD",
+  "author": "Tristan Straub",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/tristanstraub/logoverlay/issues"
   }
