@@ -12,8 +12,11 @@
 (make-variable-buffer-local 'logoverlay--showing-overlays)
 
 (defvar logoverlay--log-contents "")
-(defvar logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*")
+(defvar logoverlay--console-log-regexp "")
 (setq logoverlay--console-log-regexp "__LOG__(\\([^,]+\\).*")
+
+(defvar logoverlay--buffer-id-regexp "")
+(setq logoverlay--buffer-id-regexp "\\(LOGID=[A-Za-z0-9]*\\)")
 
 (defvar logoverlay--logfile "/tmp/log.json")
 
@@ -36,8 +39,15 @@
 
 (defvar logoverlay-buffer-file-name (find-lisp-object-file-name 'update-log-overlays 'defun))
 
+(defun logoverlay--get-buffer-id ()
+  (save-excursion
+    (beginning-of-buffer)
+    (re-search-forward logoverlay--buffer-id-regexp nil t)
+    (let ((id (match-string-no-properties 1)))
+      (or id (buffer-file-name)))))
+
 (defun logoverlay--make-log-overlay (bounds)
-  (let ((entries (logoverlay--get-log-entries-by-file-and-id (buffer-file-name)
+  (let ((entries (logoverlay--get-log-entries-by-file-and-id (logoverlay--get-buffer-id)
                                                              (cdr (assoc 'id bounds)))))
     (mapcar (lambda (log)
               (let ((value (json-encode (cdr (assoc 'value log))))
@@ -45,6 +55,7 @@
                                            (cdr (assoc 'end bounds))
                                            )))
                 (push overlay logoverlay--logged-overlays)
+                (overlay-put overlay 'evaporate t)
                 (overlay-put overlay 'face '(underline . green))
                 (overlay-put overlay 'help-echo value)
                 (overlay-put overlay 'after-string (concat "\n -> " value))))
